@@ -8,7 +8,7 @@ from psycopg2.extras import register_hstore, register_uuid
 from everyclass.identity.config import get_config
 
 _config = get_config()
-_options = f'-c search_path={_config.POSTGRES_SCHEMA}'
+_options = f'-c search_path={_config.POSTGRES_SCHEMA},public'
 
 
 def init_pool(current_application) -> None:
