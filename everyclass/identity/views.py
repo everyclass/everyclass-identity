@@ -1,5 +1,4 @@
-import elasticapm
-from flask import Blueprint, flash, jsonify, redirect, request, session, url_for
+from flask import Blueprint, flash, jsonify, redirect, request, url_for
 from zxcvbn import zxcvbn
 
 from everyclass.identity import logger
@@ -8,7 +7,7 @@ from everyclass.identity.db.dao import CalendarToken, ID_STATUS_PASSWORD_SET, ID
     ID_STATUS_TKN_PASSED, ID_STATUS_WAIT_VERIFY, IdentityVerification, PrivacySettings, Redis, SimplePassword, User, \
     VisitTrack
 from everyclass.identity.utils.decorators import login_required
-from everyclass.rpc import RpcResourceNotFound, handle_exception_with_error_page, handle_exception_with_message
+from everyclass.rpc import RpcResourceNotFound, handle_exception_with_message
 from everyclass.rpc.api_server import APIServer
 from everyclass.rpc.auth import Auth
 from everyclass.rpc.tencent_captcha import TencentCaptcha
@@ -103,11 +102,10 @@ def register_by_email():
 
     request_id = IdentityVerification.new_register_request(student_id, "email", ID_STATUS_SENT)
 
-    with elasticapm.capture_span('send_email'):
-        try:
-            rpc_result = Auth.register_by_email(request_id, student_id)
-        except Exception as e:
-            return handle_exception_with_error_page(e)
+    try:
+        rpc_result = Auth.register_by_email(request_id, student_id)
+    except Exception as e:
+        return handle_exception_with_message(e)
 
     if rpc_result['acknowledged']:
         return jsonify({"success": True,
@@ -213,13 +211,12 @@ def register_by_password():
                                                            password=request.form["password"])
 
     # call everyclass-auth to verify password
-    with elasticapm.capture_span('register_by_password'):
-        try:
-            rpc_result = Auth.register_by_password(request_id=str(request_id),
-                                                   student_id=student_id,
-                                                   password=request.form["jwPassword"])
-        except Exception as e:
-            return handle_exception_with_error_page(e)
+    try:
+        rpc_result = Auth.register_by_password(request_id=str(request_id),
+                                               student_id=student_id,
+                                               password=request.form["jwPassword"])
+    except Exception as e:
+        return handle_exception_with_message(e)
 
     if rpc_result['acknowledged']:
         return jsonify({"success": True,
@@ -235,43 +232,46 @@ def password_strength_check():
         # 密码强度检查
         pwd_strength_report = zxcvbn(password=request.form["password"])
         if pwd_strength_report['score'] < 2:
-            return jsonify({"strong": False,
-                            "score" : pwd_strength_report['score']})
+            return jsonify({"success": True,
+                            "strong" : False,
+                            "score"  : pwd_strength_report['score']})
         else:
-            return jsonify({"strong": True,
-                            "score" : pwd_strength_report['score']})
+            return jsonify({"success": True,
+                            "strong" : True,
+                            "score"  : pwd_strength_report['score']})
     return return_err(E_INVALID_REQUEST)
 
 
 @user_bp.route('/register/byPassword/statusRefresh')
 def register_by_password_status():
-    """获取教务验证状态"""
-    if not request.args.get("request", None) or not isinstance(request.args["request"], str):
-        return "Invalid request"
-    req = IdentityVerification.get_request_by_id(request.args.get("request"))
+    """获取教务验证状态
+
+    参数：
+    - request_id
+    """
+    if not request.args.get("request_id", None):
+        return return_err(E_EMPTY_REQUEST_ID)
+    else:
+        request_id = str(request.args.get("request_id", None))
+
+    req = IdentityVerification.get_request_by_id(request_id)
     if not req:
-        return "Invalid request"
+        return return_err(E_INVALID_REQUEST)
+
     if req["verification_method"] != "password":
         logger.warn("Non-password verification request is trying get status from password interface")
-        return "Invalid request"
+        return return_err(E_INVALID_REQUEST)
 
     # fetch status from everyclass-auth
-    with elasticapm.capture_span('get_result'):
-        try:
-            rpc_result = Auth.get_result(str(request.args.get("request")))
-        except Exception as e:
-            return handle_exception_with_error_page(e)
+    try:
+        rpc_result = Auth.get_result(request_id)
+    except Exception as e:
+        return handle_exception_with_message(e)
 
     if rpc_result['success']:  # 密码验证通过，设置请求状态并新增用户
-        IdentityVerification.set_request_status(str(request.args.get("request")), ID_STATUS_PWD_SUCCESS)
+        IdentityVerification.set_request_status(request_id, ID_STATUS_PWD_SUCCESS)
 
-        verification_req = IdentityVerification.get_request_by_id(str(request.args.get("request")))
-
-        # 从 api-identity 查询学生基本信息
-        try:
-            student = APIServer.get_student(verification_req["sid_orig"])
-        except Exception as e:
-            return handle_exception_with_error_page(e)
+        verification_req = IdentityVerification.get_request_by_id(request_id)
 
         # 添加用户
         try:
@@ -280,11 +280,12 @@ def register_by_password_status():
         except ValueError:
             return return_err(E_ALREADY_REGISTERED)
 
-        return jsonify({"message": "SUCCESS"})
+        return jsonify({"success": True, "message": "SUCCESS"})
+
     elif rpc_result["message"] in ("PASSWORD_WRONG", "INTERNAL_ERROR"):
-        return jsonify({"message": rpc_result["message"]})
+        return jsonify({"success": True, "message": rpc_result["message"]})
     else:
-        return jsonify({"message": "NEXT_TIME"})
+        return jsonify({"success": True, "message": "NEXT_TIME"})
 
 
 @user_bp.route('/setPreference', methods=["POST"])

@@ -18,6 +18,7 @@ E_ALREADY_REGISTERED = Error(4007, "Already registered")  # 已经注册过了�
 E_EMPTY_TOKEN = Error(4008, "Empty token")  # 邮件 token 验证没有传递 token
 E_INVALID_TOKEN = Error(4009, "Invalid token")  # 邮件 token 无效
 E_WEAK_PASSWORD = Error(4010, "Weak password")  # 密码强度过弱
+E_EMPTY_REQUEST_ID = Error(4011, "Empty request ID")  # 请求 ID 为空
 
 # 用户面板相关
 E_INVALID_REQUEST = Error(4100, "Invalid request")  # 无效请求
