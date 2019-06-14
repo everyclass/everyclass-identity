@@ -1,4 +1,4 @@
-from flask import Blueprint, flash, jsonify, redirect, request, url_for
+from flask import Blueprint, current_app, flash, jsonify, redirect, request, url_for
 from zxcvbn import zxcvbn
 
 from everyclass.identity import logger
@@ -7,6 +7,7 @@ from everyclass.identity.db.dao import CalendarToken, ID_STATUS_PASSWORD_SET, ID
     ID_STATUS_TKN_PASSED, ID_STATUS_WAIT_VERIFY, IdentityVerification, PrivacySettings, Redis, SimplePassword, User, \
     VisitTrack
 from everyclass.identity.utils.decorators import login_required
+from everyclass.identity.utils.tokens import generate_token
 from everyclass.rpc import RpcResourceNotFound, handle_exception_with_message
 from everyclass.rpc.api_server import APIServer
 from everyclass.rpc.auth import Auth
@@ -60,8 +61,9 @@ def login():
         return return_err(E_STUDENT_NOT_REGISTERED)
 
     if success:
-        print(student.name)
-        # todo 颁发 jwt token
+        return jsonify({"success": True,
+                        "token"  : generate_token({"sub": student.student_id,
+                                                   "pol": current_app.config.TYK_POLICY_ID})})
     else:
         return return_err(E_WRONG_PASSWORD)
 

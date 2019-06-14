@@ -19,6 +19,7 @@ typing-extensions = "*"
 redis = "*"
 flask-moment = "*"
 psycopg2-binary = "~=2.0"
+pyjwt = "~=1.0"
 
 [dev-packages]
 coverage = "==4.4.2"

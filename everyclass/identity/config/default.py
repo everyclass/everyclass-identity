@@ -100,6 +100,9 @@ class Config(object):
     API_SERVER_TOKEN = ''
     AUTH_BASE_URL = 'http://everyclass-auth'
 
+    JWT_PRIVATE_KEY = ''
+    TYK_POLICY_ID = ''
+
     DEFAULT_PRIVACY_LEVEL = 0
 
     # define available environments for logs, APM and error tracking
