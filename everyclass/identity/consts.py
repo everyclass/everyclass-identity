@@ -20,7 +20,8 @@ E_INVALID_TOKEN = Error(4009, "Invalid token")  # 邮件 token 无效
 E_WEAK_PASSWORD = Error(4010, "Weak password")  # 密码强度过弱
 
 # 用户面板相关
-E_INVALID_PRIVACY_LEVEL = Error(4100, "Invalid preference value")  # 无效的隐私等级
+E_INVALID_REQUEST = Error(4100, "Invalid request")  # 无效请求
+E_INVALID_PRIVACY_LEVEL = Error(4101, "Invalid preference value")  # 无效的隐私等级
 E_LOGIN_REQUIRED = Error(4011, "Login required")  # 需要登录
 
 # 5XX 开头为服务器内部错误

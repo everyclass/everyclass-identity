@@ -4,9 +4,9 @@ from zxcvbn import zxcvbn
 
 from everyclass.identity import logger
 from everyclass.identity.consts import *
-from everyclass.identity.db.dao import ID_STATUS_PASSWORD_SET, ID_STATUS_PWD_SUCCESS, ID_STATUS_SENT, \
-    ID_STATUS_TKN_PASSED, ID_STATUS_WAIT_VERIFY, IdentityVerification, PrivacySettings, Redis, \
-    SimplePassword, User, VisitTrack
+from everyclass.identity.db.dao import CalendarToken, ID_STATUS_PASSWORD_SET, ID_STATUS_PWD_SUCCESS, ID_STATUS_SENT, \
+    ID_STATUS_TKN_PASSED, ID_STATUS_WAIT_VERIFY, IdentityVerification, PrivacySettings, Redis, SimplePassword, User, \
+    VisitTrack
 from everyclass.identity.utils.decorators import login_required
 from everyclass.rpc import RpcResourceNotFound, handle_exception_with_error_page, handle_exception_with_message
 from everyclass.rpc.api_server import APIServer
@@ -230,7 +230,7 @@ def register_by_password():
 
 @user_bp.route('/register/passwordStrengthCheck', methods=["POST"])
 def password_strength_check():
-    """AJAX 密码强度检查"""
+    """密码强度检查"""
     if request.form.get("password", None):
         # 密码强度检查
         pwd_strength_report = zxcvbn(password=request.form["password"])
@@ -240,12 +240,12 @@ def password_strength_check():
         else:
             return jsonify({"strong": True,
                             "score" : pwd_strength_report['score']})
-    return jsonify({"invalid_request": True})
+    return return_err(E_INVALID_REQUEST)
 
 
 @user_bp.route('/register/byPassword/statusRefresh')
 def register_by_password_status():
-    """AJAX 刷新教务验证状态"""
+    """获取教务验证状态"""
     if not request.args.get("request", None) or not isinstance(request.args["request"], str):
         return "Invalid request"
     req = IdentityVerification.get_request_by_id(request.args.get("request"))
@@ -306,7 +306,7 @@ def js_set_preference():
 @login_required
 def reset_calendar_token():
     """重置日历订阅令牌"""
-    CalendarToken.reset_tokens(session[SESSION_CURRENT_USER].sid_orig)
+    CalendarToken.reset_tokens(request.headers["STUDENT_ID"])
     flash("日历订阅令牌重置成功")
     return redirect(url_for("user.main"))
 
