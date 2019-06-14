@@ -296,8 +296,7 @@ def js_set_preference():
         privacy_level = int(request.form["privacyLevel"])
         if privacy_level not in (0, 1, 2):
             logger.warn("Received malformed set preference request. privacyLevel value not valid.")
-            return jsonify({"acknowledged": False,
-                            "message"     : "Invalid value"})
+            return return_err(E_INVALID_PRIVACY_LEVEL)
 
         PrivacySettings.set_level(request.headers["STUDENT_ID"], privacy_level)
     return jsonify({"acknowledged": True})
