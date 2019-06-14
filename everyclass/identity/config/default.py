@@ -114,13 +114,17 @@ class Config(object):
     # fields that should be overwritten in production environment
     PRODUCTION_OVERWRITE_FIELDS = ('SECRET_KEY',
                                    'TENCENT_CAPTCHA_AID',
-                                   'TENCENT_CAPTCHA_SECRET'
+                                   'TENCENT_CAPTCHA_SECRET',
+                                   'JWT_PRIVATE_KEY'
                                    )
 
     # fields that should not be in log
     PRODUCTION_SECURE_FIELDS = ("SENTRY_CONFIG.dsn",
                                 "REDIS.password",
+                                'POSTGRES_CONNECTION.password',
                                 "ELASTIC_APM.SECRET_TOKEN",
                                 "MAINTENANCE_CREDENTIALS",
                                 "SECRET_KEY",
-                                "TENCENT_CAPTCHA_SECRET")
+                                "TENCENT_CAPTCHA_SECRET",
+                                'JWT_PRIVATE_KEY',
+                                'API_SERVER_TOKEN')
