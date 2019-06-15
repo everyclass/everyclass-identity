@@ -36,7 +36,7 @@ def login():
     if not request.form.get("student_id", None):
         return return_err(E_EMPTY_USERNAME)
     else:
-        student_id = request.form.get("student_id", None)
+        student_id = request.form.get("student_id", None).lower()
 
     if not request.form.get("password", None):
         return return_err(E_EMPTY_PASSWORD)
@@ -78,7 +78,7 @@ def register():
     if not request.form.get("student_id", None):  # 表单为空
         return return_err(E_EMPTY_USERNAME)
     else:
-        student_id = request.form.get("student_id", None)
+        student_id = request.form.get("student_id", None).lower()
 
     # 如果输入的学号已经注册，跳转到登录页面
     if User.exist(student_id):
@@ -97,7 +97,7 @@ def register_by_email():
     if not request.form.get("student_id", None):
         return return_err(E_EMPTY_USERNAME)
     else:
-        student_id = request.form.get("student_id", None)
+        student_id = request.form.get("student_id", None).lower()
 
     if User.exist(student_id):
         return return_err(E_ALREADY_REGISTERED)
@@ -190,7 +190,7 @@ def register_by_password():
     if not request.form.get("student_id", None):
         return return_err(E_EMPTY_USERNAME)
     else:
-        student_id = request.form["student_id"]
+        student_id = request.form["student_id"].lower()
     if any(map(lambda x: not request.form.get(x, None), ("password", "jwPassword"))):
         return return_err(E_EMPTY_PASSWORD)
 
