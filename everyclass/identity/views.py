@@ -2,15 +2,15 @@ from flask import Blueprint, current_app, flash, jsonify, redirect, request, url
 from zxcvbn import zxcvbn
 
 from everyclass.identity import logger
-from everyclass.identity.consts import *
 from everyclass.identity.db.dao import CalendarToken, ID_STATUS_PASSWORD_SET, ID_STATUS_PWD_SUCCESS, ID_STATUS_SENT, \
     ID_STATUS_TKN_PASSED, ID_STATUS_WAIT_VERIFY, IdentityVerification, PrivacySettings, Redis, SimplePassword, User, \
     VisitTrack
 from everyclass.identity.utils.decorators import login_required
 from everyclass.identity.utils.tokens import generate_token
-from everyclass.rpc import RpcResourceNotFound, handle_exception_with_message
+from everyclass.rpc import RpcResourceNotFound, handle_exception_with_json
 from everyclass.rpc.api_server import APIServer
 from everyclass.rpc.auth import Auth
+from everyclass.rpc.consts.identity import *
 from everyclass.rpc.tencent_captcha import TencentCaptcha
 
 user_bp = Blueprint('user', __name__)
@@ -22,7 +22,7 @@ def return_err(err_code: Error):
                     "message" : err_code.message})
 
 
-@user_bp.route('/login', methods=["GET", "POST"])
+@user_bp.route('/login', methods=["POST"])
 def login():
     """
     用户登录
@@ -50,9 +50,8 @@ def login():
         student = APIServer.get_student(student_id)
     except RpcResourceNotFound:
         return return_err(E_STUDENT_UNEXIST)
-
     except Exception as e:
-        return handle_exception_with_message(e)
+        return handle_exception_with_json(e, lazy=True)
 
     try:
         success = User.check_password(student_id, request.form["password"])
@@ -107,7 +106,7 @@ def register_by_email():
     try:
         rpc_result = Auth.register_by_email(request_id, student_id)
     except Exception as e:
-        return handle_exception_with_message(e)
+        return handle_exception_with_json(e, lazy=True)
 
     if rpc_result['acknowledged']:
         return jsonify({"success": True,
@@ -138,7 +137,7 @@ def email_verification():
         try:
             rpc_result = Auth.verify_email_token(token=request.form.get("token", None))
         except Exception as e:
-            return handle_exception_with_message(e)
+            return handle_exception_with_json(e, lazy=True)
 
         if not rpc_result.success:
             return return_err(E_INVALID_TOKEN)
@@ -168,7 +167,7 @@ def email_verification():
         try:
             rpc_result = Auth.verify_email_token(token=request.form.get("token", None))
         except Exception as e:
-            return handle_exception_with_message(e)
+            return handle_exception_with_json(e, True)
 
         if rpc_result.success:
             IdentityVerification.set_request_status(rpc_result.request_id, ID_STATUS_TKN_PASSED)
@@ -218,7 +217,7 @@ def register_by_password():
                                                student_id=student_id,
                                                password=request.form["jwPassword"])
     except Exception as e:
-        return handle_exception_with_message(e)
+        return handle_exception_with_json(e, True)
 
     if rpc_result['acknowledged']:
         return jsonify({"success": True,
@@ -268,7 +267,7 @@ def register_by_password_status():
     try:
         rpc_result = Auth.get_result(request_id)
     except Exception as e:
-        return handle_exception_with_message(e)
+        return handle_exception_with_json(e, lazy=True)
 
     if rpc_result['success']:  # 密码验证通过，设置请求状态并新增用户
         IdentityVerification.set_request_status(request_id, ID_STATUS_PWD_SUCCESS)

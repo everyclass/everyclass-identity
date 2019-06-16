@@ -2,7 +2,7 @@ import functools
 
 from flask import request
 
-from everyclass.identity.consts import E_LOGIN_REQUIRED
+from everyclass.rpc.consts.identity import E_LOGIN_REQUIRED
 
 
 def login_required(func):
