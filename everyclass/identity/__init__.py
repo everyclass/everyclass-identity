@@ -135,8 +135,9 @@ def create_app() -> Flask:
 
     @app.errorhandler(500)
     def internal_server_error(error):
-        return jsonify({"success": False,
-                        "error"  : repr(error)})
+        return jsonify({"success" : False,
+                        "err_code": 500,
+                        "error"   : f"Internal server error: {repr(error)}"})
 
     global __app
     __app = app

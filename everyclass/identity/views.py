@@ -1,4 +1,4 @@
-from flask import Blueprint, current_app, flash, jsonify, redirect, request, url_for
+from flask import Blueprint, current_app, jsonify, request
 from zxcvbn import zxcvbn
 
 from everyclass.identity import logger
@@ -117,10 +117,10 @@ def register_by_email():
         return jsonify({"success": True,
                         "message": "Email sent"})
     else:
-        return return_err(E_INTERNAL_ERROR)
+        return return_err(E_BE_INTERNAL)
 
 
-@user_bp.route('/emailVerification', methods=['GET', 'POST'])
+@user_bp.route('/register/emailVerification', methods=['GET', 'POST'])
 def email_verification():
     """
     注册：邮箱验证。GET 代表验证 token，POST 代表设置密码。
@@ -196,18 +196,18 @@ def register_by_password():
     JSON 参数：
     - student_id
     - password
-    - jwPassword
+    - jw_password
     """
     if not request.json.get("student_id", None):
         return return_err(E_EMPTY_USERNAME)
     else:
         student_id = request.json["student_id"].lower()
 
-    if any(map(lambda x: not request.json.get(x, None), ("password", "jwPassword"))):
+    if any(map(lambda x: not request.json.get(x, None), ("password", "jw_password"))):
         return return_err(E_EMPTY_PASSWORD)
     else:
         password = request.json.get("password")
-        jw_password = request.json.get("jwPassword")
+        jw_password = request.json.get("jw_password")
 
     # todo 这里可以通过 api-server 查询判断一下学号是否存在
 
@@ -239,7 +239,7 @@ def register_by_password():
         return jsonify({"success": True,
                         "message": "Acknowledged"})
     else:
-        return return_err(E_INTERNAL_ERROR)
+        return return_err(E_BE_INTERNAL)
 
 
 @user_bp.route('/register/passwordStrengthCheck', methods=["GET"])
@@ -256,7 +256,7 @@ def password_strength_check():
             return jsonify({"success": True,
                             "strong" : True,
                             "score"  : pwd_strength_report['score']})
-    return return_err(E_INVALID_REQUEST)
+    return return_err(E_EMPTY_PASSWORD)
 
 
 @user_bp.route('/register/byPassword/statusRefresh')
@@ -317,7 +317,9 @@ def js_set_preference():
             return return_err(E_INVALID_PRIVACY_LEVEL)
 
         PrivacySettings.set_level(request.headers["STUDENT_ID"], privacy_level)
-    return jsonify({"acknowledged": True})
+        return jsonify({"success": True, "message": "Set privacy level success"})
+    else:
+        return return_err(E_INVALID_REQUEST)
 
 
 @user_bp.route('/resetCalendarToken')
@@ -325,16 +327,16 @@ def js_set_preference():
 def reset_calendar_token():
     """重置日历订阅令牌"""
     CalendarToken.reset_tokens(request.headers["STUDENT_ID"])
-    flash("日历订阅令牌重置成功")
-    return redirect(url_for("user.main"))
+    return jsonify({"success": True,
+                    "message": "Calendar token reset success"})
 
 
 @user_bp.route('/visitors')
 @login_required
 def visitors():
-    """我的访客页面"""
+    """我的访客列表"""
     visitor_list = VisitTrack.get_visitors(request.headers["STUDENT_ID"])
     visitor_count = Redis.get_visitor_count(request.headers["STUDENT_ID"])
     return jsonify({"success" : True,
-                    "count"   : visitor_count,
-                    "visitors": visitor_list})
+                    "count"   : visitor_count,  # 实名+匿名
+                    "visitors": visitor_list})  # 实名列表
