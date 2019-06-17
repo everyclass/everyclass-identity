@@ -16,10 +16,13 @@ from everyclass.rpc.tencent_captcha import TencentCaptcha
 user_bp = Blueprint('user', __name__)
 
 
-def return_err(err_code: Error):
-    return jsonify({"success" : False,
-                    "err_code": err_code.err_code,
-                    "message" : err_code.message})
+def return_err(err: Error, message_overwrite: str = None):
+    resp = jsonify({"success": False,
+                    "err"    : err.err_code,
+                    "message": message_overwrite if message_overwrite else err.message})
+    if str(err.err_code).startswith("45"):  # 4500 表示 4 号服务（identity）的 5XX 系列错误（服务器内部错误）
+        resp.status_code = 500
+    return resp
 
 
 @user_bp.route('/login')
