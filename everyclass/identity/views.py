@@ -36,9 +36,11 @@ def login():
     JSON 参数：
     - student_id
     - password
+    - captcha_ticket
+    - captcha_rand
+    - remote_addr
     """
-    passed, ret_msg, student_id, password = check_payloads(request,
-                                                           ("student_id", return_err(E_EMPTY_USERNAME)),
+    passed, ret_msg, student_id, password = check_payloads(("student_id", return_err(E_EMPTY_USERNAME)),
                                                            ("password", return_err(E_EMPTY_PASSWORD)))
     if not passed:
         return ret_msg
@@ -195,19 +197,22 @@ def register_by_password():
     - student_id
     - password
     - jw_password
+    - captcha_ticket
+    - captcha_rand
+    - remote_addr
     """
-    if not request.json.get("student_id", None):
-        return return_err(E_EMPTY_USERNAME)
-    else:
-        student_id = request.json["student_id"].lower()
-
-    if any(map(lambda x: not request.json.get(x, None), ("password", "jw_password"))):
-        return return_err(E_EMPTY_PASSWORD)
-    else:
-        password = request.json.get("password")
-        jw_password = request.json.get("jw_password")
+    passed, ret_msg, student_id, password, jw_password = check_payloads(
+            ("student_id", return_err(E_EMPTY_USERNAME)),
+            ("password", return_err(E_EMPTY_PASSWORD)),
+            ("jw_password", return_err(E_EMPTY_PASSWORD)))
+    if not passed:
+        return ret_msg
 
     # todo 这里可以通过 api-server 查询判断一下学号是否存在
+
+    # captcha
+    if not TencentCaptcha.verify():
+        return return_err(E_INVALID_CAPTCHA)
 
     # 密码强度检查
     pwd_strength_report = zxcvbn(password=password)
@@ -215,10 +220,6 @@ def register_by_password():
         SimplePassword.new(password=password,
                            sid_orig=student_id)
         return return_err(E_WEAK_PASSWORD)
-
-    # captcha
-    if not TencentCaptcha.verify():
-        return return_err(E_INVALID_CAPTCHA)
 
     request_id = IdentityVerification.new_register_request(student_id,
                                                            "password",

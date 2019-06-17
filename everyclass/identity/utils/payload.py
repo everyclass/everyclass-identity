@@ -1,4 +1,7 @@
-def check_payloads(request, *fields):
+from flask import request
+
+
+def check_payloads(*fields):
     """检查请求是否包含需要的字段
 
     @:param json: request 对象
