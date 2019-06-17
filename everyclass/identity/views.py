@@ -6,6 +6,7 @@ from everyclass.identity.db.dao import CalendarToken, ID_STATUS_PASSWORD_SET, ID
     ID_STATUS_TKN_PASSED, ID_STATUS_WAIT_VERIFY, IdentityVerification, PrivacySettings, Redis, SimplePassword, User, \
     VisitTrack
 from everyclass.identity.utils.decorators import login_required
+from everyclass.identity.utils.payload import check_payloads
 from everyclass.identity.utils.tokens import generate_token
 from everyclass.rpc import RpcResourceNotFound, handle_exception_with_json
 from everyclass.rpc.api_server import APIServer
@@ -36,15 +37,11 @@ def login():
     - student_id
     - password
     """
-    if not request.json.get("student_id", None):
-        return return_err(E_EMPTY_USERNAME)
-    else:
-        student_id = request.json.get("student_id", None).lower()
-
-    if not request.json.get("password", None):
-        return return_err(E_EMPTY_PASSWORD)
-    else:
-        password = request.json.get("password", None)
+    passed, ret_msg, student_id, password = check_payloads(request,
+                                                           ("student_id", return_err(E_EMPTY_USERNAME)),
+                                                           ("password", return_err(E_EMPTY_PASSWORD)))
+    if not passed:
+        return ret_msg
 
     # captcha
     if not TencentCaptcha.verify():
@@ -156,19 +153,20 @@ def email_verification():
         if req["status"] != ID_STATUS_TKN_PASSED:
             return return_err(E_INVALID_TOKEN)
 
-        sid_orig = req['sid_orig']
+        student_id = req['sid_orig']
 
         # 密码强度检查
         pwd_strength_report = zxcvbn(password=password)
         if pwd_strength_report['score'] < 2:
-            SimplePassword.new(password=password, sid_orig=sid_orig)
+            SimplePassword.new(password=password, sid_orig=student_id)
             return return_err(E_WEAK_PASSWORD)
 
-        User.add_user(sid_orig=sid_orig, password=password)
+        User.add_user(sid_orig=student_id, password=password)
         IdentityVerification.set_request_status(str(req["request_id"]), ID_STATUS_PASSWORD_SET)
 
-        return jsonify({"success": True,
-                        "message": "Register success"})
+        return jsonify({"success"   : True,
+                        "message"   : "Register success",
+                        "student_id": student_id})
     else:
         # GET 验证 token
         if not request.json.get("token", None):
