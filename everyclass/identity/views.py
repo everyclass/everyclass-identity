@@ -235,8 +235,9 @@ def register_by_password():
         return handle_exception_with_json(e, True)
 
     if rpc_result['acknowledged']:
-        return jsonify({"success": True,
-                        "message": "Acknowledged"})
+        return jsonify({"success"   : True,
+                        "message"   : "Acknowledged",
+                        "request_id": str(request_id)})
     else:
         return return_err(E_BE_INTERNAL)
 
