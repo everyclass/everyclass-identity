@@ -22,7 +22,7 @@ def return_err(err_code: Error):
                     "message" : err_code.message})
 
 
-@user_bp.route('/login', methods=["POST"])
+@user_bp.route('/login')
 def login():
     """
     用户登录
@@ -69,7 +69,7 @@ def login():
         return return_err(E_WRONG_PASSWORD)
 
 
-@user_bp.route('/register', methods=["POST"])
+@user_bp.route('/register')
 def register():
     """注册第一步：输入学号，检查是否已经注册
 
@@ -88,7 +88,7 @@ def register():
     return jsonify({"success": True})
 
 
-@user_bp.route('/register/byEmail')
+@user_bp.route('/register/byEmail', methods=['POST'])
 def register_by_email():
     """使用邮箱验证注册
 
@@ -239,7 +239,7 @@ def register_by_password():
         return return_err(E_INTERNAL_ERROR)
 
 
-@user_bp.route('/register/passwordStrengthCheck', methods=["POST"])
+@user_bp.route('/register/passwordStrengthCheck', methods=["GET"])
 def password_strength_check():
     """密码强度检查"""
     if request.json.get("password", None):
