@@ -27,19 +27,21 @@ def login():
     """
     用户登录
 
-    采用表单 POST。如果正确则返回 JWT Token
+    采用JSON POST。如果正确则返回 JWT Token
 
-    表单参数：
+    JSON 参数：
     - student_id
     - password
     """
-    if not request.form.get("student_id", None):
+    if not request.json.get("student_id", None):
         return return_err(E_EMPTY_USERNAME)
     else:
-        student_id = request.form.get("student_id", None).lower()
+        student_id = request.json.get("student_id", None).lower()
 
-    if not request.form.get("password", None):
+    if not request.json.get("password", None):
         return return_err(E_EMPTY_PASSWORD)
+    else:
+        password = request.json.get("password", None)
 
     # captcha
     if not TencentCaptcha.verify():
@@ -54,7 +56,7 @@ def login():
         return handle_exception_with_json(e, lazy=True)
 
     try:
-        success = User.check_password(student_id, request.form["password"])
+        success = User.check_password(student_id, password)
     except ValueError:
         # 未注册
         return return_err(E_STUDENT_NOT_REGISTERED)
@@ -74,10 +76,10 @@ def register():
     表单参数：
     - student_id
     """
-    if not request.form.get("student_id", None):  # 表单为空
+    if not request.json.get("student_id", None):  # 表单为空
         return return_err(E_EMPTY_USERNAME)
     else:
-        student_id = request.form.get("student_id", None).lower()
+        student_id = request.json.get("student_id", None).lower()
 
     # 如果输入的学号已经注册，跳转到登录页面
     if User.exist(student_id):
@@ -90,13 +92,13 @@ def register():
 def register_by_email():
     """使用邮箱验证注册
 
-    表单参数：
+    JSON 参数：
     - student_id
     """
-    if not request.form.get("student_id", None):
+    if not request.json.get("student_id", None):
         return return_err(E_EMPTY_USERNAME)
     else:
-        student_id = request.form.get("student_id", None).lower()
+        student_id = request.json.get("student_id", None).lower()
 
     if User.exist(student_id):
         return return_err(E_ALREADY_REGISTERED)
@@ -120,22 +122,27 @@ def email_verification():
     """
     注册：邮箱验证。GET 代表验证 token，POST 代表设置密码。
 
-    GET 表单参数：
+    GET JSON参数：
     - token
 
-    POST 表单参数：
+    POST JSON参数：
     - token
     - password
     """
     if request.method == 'POST':
         # 设置密码表单提交
-        if not request.form.get("token", None):
+        if not request.json.get("token", None):
             return return_err(E_EMPTY_TOKEN)
-        if not request.form.get("password", None):
+        else:
+            token = request.json.get("token", None)
+
+        if not request.json.get("password", None):
             return return_err(E_EMPTY_PASSWORD)
+        else:
+            password = request.json.get("password", None)
 
         try:
-            rpc_result = Auth.verify_email_token(token=request.form.get("token", None))
+            rpc_result = Auth.verify_email_token(token=token)
         except Exception as e:
             return handle_exception_with_json(e, lazy=True)
 
@@ -149,23 +156,25 @@ def email_verification():
         sid_orig = req['sid_orig']
 
         # 密码强度检查
-        pwd_strength_report = zxcvbn(password=request.form["password"])
+        pwd_strength_report = zxcvbn(password=password)
         if pwd_strength_report['score'] < 2:
-            SimplePassword.new(password=request.form["password"], sid_orig=sid_orig)
+            SimplePassword.new(password=password, sid_orig=sid_orig)
             return return_err(E_WEAK_PASSWORD)
 
-        User.add_user(sid_orig=sid_orig, password=request.form['password'])
+        User.add_user(sid_orig=sid_orig, password=password)
         IdentityVerification.set_request_status(str(req["request_id"]), ID_STATUS_PASSWORD_SET)
 
         return jsonify({"success": True,
                         "message": "Register success"})
     else:
         # GET 验证 token
-        if not request.args.get("token", None):
+        if not request.json.get("token", None):
             return return_err(E_EMPTY_TOKEN)
+        else:
+            token = request.json.get("token", None)
 
         try:
-            rpc_result = Auth.verify_email_token(token=request.form.get("token", None))
+            rpc_result = Auth.verify_email_token(token=token)
         except Exception as e:
             return handle_exception_with_json(e, True)
 
@@ -181,24 +190,28 @@ def email_verification():
 def register_by_password():
     """使用密码验证注册
 
-    表单参数：
+    JSON 参数：
     - student_id
     - password
     - jwPassword
     """
-    if not request.form.get("student_id", None):
+    if not request.json.get("student_id", None):
         return return_err(E_EMPTY_USERNAME)
     else:
-        student_id = request.form["student_id"].lower()
-    if any(map(lambda x: not request.form.get(x, None), ("password", "jwPassword"))):
+        student_id = request.json["student_id"].lower()
+
+    if any(map(lambda x: not request.json.get(x, None), ("password", "jwPassword"))):
         return return_err(E_EMPTY_PASSWORD)
+    else:
+        password = request.json.get("password")
+        jw_password = request.json.get("jwPassword")
 
     # todo 这里可以通过 api-server 查询判断一下学号是否存在
 
     # 密码强度检查
-    pwd_strength_report = zxcvbn(password=request.form["password"])
+    pwd_strength_report = zxcvbn(password=password)
     if pwd_strength_report['score'] < 2:
-        SimplePassword.new(password=request.form["password"],
+        SimplePassword.new(password=password,
                            sid_orig=student_id)
         return return_err(E_WEAK_PASSWORD)
 
@@ -209,13 +222,13 @@ def register_by_password():
     request_id = IdentityVerification.new_register_request(student_id,
                                                            "password",
                                                            ID_STATUS_WAIT_VERIFY,
-                                                           password=request.form["password"])
+                                                           password=password)
 
     # call everyclass-auth to verify password
     try:
         rpc_result = Auth.register_by_password(request_id=str(request_id),
                                                student_id=student_id,
-                                               password=request.form["jwPassword"])
+                                               password=jw_password)
     except Exception as e:
         return handle_exception_with_json(e, True)
 
@@ -229,9 +242,9 @@ def register_by_password():
 @user_bp.route('/register/passwordStrengthCheck', methods=["POST"])
 def password_strength_check():
     """密码强度检查"""
-    if request.form.get("password", None):
+    if request.json.get("password", None):
         # 密码强度检查
-        pwd_strength_report = zxcvbn(password=request.form["password"])
+        pwd_strength_report = zxcvbn(password=request.json["password"])
         if pwd_strength_report['score'] < 2:
             return jsonify({"success": True,
                             "strong" : False,
@@ -250,10 +263,10 @@ def register_by_password_status():
     参数：
     - request_id
     """
-    if not request.args.get("request_id", None):
+    if not request.json.get("request_id", None):
         return return_err(E_EMPTY_REQUEST_ID)
     else:
-        request_id = str(request.args.get("request_id", None))
+        request_id = str(request.json.get("request_id", None))
 
     req = IdentityVerification.get_request_by_id(request_id)
     if not req:
@@ -293,9 +306,9 @@ def register_by_password_status():
 @login_required
 def js_set_preference():
     """更新偏好设置"""
-    if request.form.get("privacyLevel", None):
+    if request.json.get("privacyLevel", None):
         # update privacy level
-        privacy_level = int(request.form["privacyLevel"])
+        privacy_level = int(request.json["privacyLevel"])
         if privacy_level not in (0, 1, 2):
             logger.warn("Received malformed set preference request. privacyLevel value not valid.")
             return return_err(E_INVALID_PRIVACY_LEVEL)
