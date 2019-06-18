@@ -297,12 +297,22 @@ def register_by_password_status():
         except ValueError:
             return return_err(E_ALREADY_REGISTERED)
 
-        return jsonify({"success": True, "message": "SUCCESS"})
+        return jsonify({"success" : True,
+                        "err_code": E_PWD_VER_SUCCESS.err_code,
+                        "message" : E_PWD_VER_SUCCESS.message})
 
-    elif rpc_result["message"] in ("PASSWORD_WRONG", "INTERNAL_ERROR"):
-        return jsonify({"success": True, "message": rpc_result["message"]})
+    elif rpc_result["message"] == "PASSWORD_WRONG":
+        return jsonify({"success" : False,
+                        "err_code": E_PWD_VER_WRONG.err_code,
+                        "message" : E_PWD_VER_WRONG.message})
+    elif rpc_result["message"] == "INTERNAL_ERROR":
+        return jsonify({"success" : False,
+                        "err_code": E_BE_INTERNAL.err_code,
+                        "message" : E_BE_INTERNAL.message})
     else:
-        return jsonify({"success": True, "message": "NEXT_TIME"})
+        return jsonify({"success" : False,
+                        "err_code": E_PWD_VER_NEXT.err_code,
+                        "message" : E_PWD_VER_NEXT.message})
 
 
 @user_bp.route('/setPreference', methods=["POST"])
