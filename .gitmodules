@@ -6,3 +6,7 @@
 	path = everyclass/identity/utils/logbook_logstash
 	branch = master
 	url = https://github.com/fr0der1c/logbook_logstash
+[submodule "everyclass-common"]
+	path = everyclass/common
+	url = https://github.com/everyclass/everyclass-common
+	branch = master
