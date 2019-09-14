@@ -1,4 +1,3 @@
-import datetime
 import logging
 
 import gc
@@ -9,7 +8,6 @@ from raven.handlers.logbook import SentryHandler
 logger = logging.getLogger(__name__)
 sentry = Sentry()
 __app = None
-__load_time = datetime.datetime.now()
 
 try:
     import uwsgidecorators
