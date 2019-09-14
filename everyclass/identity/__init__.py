@@ -27,9 +27,10 @@ try:
     def init_plugins():
         """初始化日志、错误追踪插件，并将当前配置信息打 log"""
         from everyclass.common.flask import print_config
+        from everyclass.common.env import get_env
 
         # Sentry
-        if __app.config['CONFIG_NAME'] in __app.config['SENTRY_AVAILABLE_IN']:
+        if get_env() in __app.config['SENTRY_AVAILABLE_IN']:
             sentry.init_app(app=__app)
             sentry_handler = SentryHandler(sentry.client)
             sentry_handler.setLevel(logging.WARNING)
@@ -53,10 +54,6 @@ except ModuleNotFoundError:
 
 def create_app() -> Flask:
     """创建 flask app"""
-    from everyclass.identity.utils.logbook_logstash.formatter import LOG_FORMAT_STRING
-
-    print("Creating app...")
-
     app = Flask(__name__)
 
     # load app config
